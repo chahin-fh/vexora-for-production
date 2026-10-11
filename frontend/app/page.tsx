@@ -56,7 +56,7 @@ export default function Page() {
     event.preventDefault()
     setOrderStatus('Envoi en cours…')
     const form = new FormData(event.currentTarget)
-    const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), phone: form.get('phone'), address: form.get('address'), city: form.get('city'), items: orderItems, total: 0 }) })
+    const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), phone: form.get('phone'), address: form.get('address'), city: form.get('city'), items: orderItems }) })
     const result = await response.json()
     if (!response.ok) return setOrderStatus(result.error ?? 'Vérifiez vos informations.')
     setOrderStatus(`Commande confirmée · #${String(result.orderId).slice(0, 8).toUpperCase()}`)

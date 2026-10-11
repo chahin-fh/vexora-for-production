@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+# Local environment files
+.env*
+!.env.example
+
 
 # Generated output and logs
 coverage/

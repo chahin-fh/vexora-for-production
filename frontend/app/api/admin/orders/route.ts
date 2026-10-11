@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getBackendApiUrl } from '@/lib/backend-api'
 
 async function forwardAdminRequest(request: Request, method: 'GET' | 'PATCH') {
   const adminKey = request.headers.get('x-admin-key')
@@ -6,8 +7,12 @@ async function forwardAdminRequest(request: Request, method: 'GET' | 'PATCH') {
     return NextResponse.json({ error: 'La clé administrateur est requise.' }, { status: 401 })
   }
 
+  const backendUrl = getBackendApiUrl()
+  if (!backendUrl) {
+    return NextResponse.json({ error: 'Backend API URL is not configured.' }, { status: 503 })
+  }
+
   try {
-    const backendUrl = (process.env.BACKEND_API_URL || 'http://localhost:4000').replace(/\/+$/, '')
     const response = await fetch(`${backendUrl}/api/admin/orders`, {
       method,
       headers: {

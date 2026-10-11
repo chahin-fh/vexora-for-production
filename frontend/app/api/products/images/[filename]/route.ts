@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getBackendApiUrl } from '@/lib/backend-api'
 
 export async function GET(_request: Request, context: { params: Promise<{ filename: string }> }) {
   const { filename } = await context.params
@@ -6,8 +7,12 @@ export async function GET(_request: Request, context: { params: Promise<{ filena
     return NextResponse.json({ error: 'Image introuvable.' }, { status: 404 })
   }
 
+  const backendUrl = getBackendApiUrl()
+  if (!backendUrl) {
+    return NextResponse.json({ error: 'Backend API URL is not configured.' }, { status: 503 })
+  }
+
   try {
-    const backendUrl = (process.env.BACKEND_API_URL || 'http://localhost:4000').replace(/\/+$/, '')
     const response = await fetch(`${backendUrl}/uploads/products/${filename}`, {
       cache: 'force-cache',
       signal: AbortSignal.timeout(10000),

@@ -12,7 +12,17 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 4000
 
-app.use(cors())
+const allowedOrigins = new Set([process.env.FRONTEND_URL?.replace(/\/+$/, '')].filter(Boolean))
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.add('http://localhost:3000')
+  allowedOrigins.add('http://localhost:3001')
+}
+
+app.use(cors({
+  origin(origin, callback) {
+    callback(null, Boolean(origin && allowedOrigins.has(origin)))
+  },
+}))
 app.use(express.json({ limit: '8mb' }))
 
 const databaseConfig = process.env.MYSQL_URL || (process.env.MYSQL_HOST ? {
@@ -21,9 +31,10 @@ const databaseConfig = process.env.MYSQL_URL || (process.env.MYSQL_HOST ? {
   user: process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
   database: process.env.MYSQL_DATABASE,
+  ...(process.env.MYSQL_SSL_CA ? { ssl: { ca: process.env.MYSQL_SSL_CA } } : {}),
 } : null)
 const pool = databaseConfig ? mysql.createPool(databaseConfig) : null
-const uploadDirectory = path.join(__dirname, 'uploads', 'products')
+const uploadDirectory = process.env.UPLOAD_DIRECTORY || path.join(__dirname, 'uploads', 'products')
 app.use('/uploads/products', express.static(uploadDirectory, { maxAge: '1y', immutable: true }))
 
 const orderSchema = {
@@ -45,7 +56,7 @@ function normalizeItems(items) {
     quantity: Math.min(20, Math.max(1, Math.floor(Number(item.quantity) || 1))),
   }))
 
-  const invalidItem = normalized.some((item) => !Number.isFinite(item.id) || item.id <= 0 || !item.name || item.quantity < 1)
+  const invalidItem = normalized.some((item) => !Number.isSafeInteger(item.id) || item.id <= 0 || !item.name || item.quantity < 1)
   if (invalidItem) {
     return null
   }
@@ -70,8 +81,14 @@ function requireAdminAccess(req, res, next) {
 
 const orderStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'archived', 'cancelled']
 
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true, message: 'Vexora backend is running', timestamp: new Date().toISOString() })
+app.get('/api/health', async (req, res) => {
+  try {
+    if (!pool) throw new Error('Database is not configured')
+    await pool.query('SELECT 1')
+    return res.json({ ok: true, timestamp: new Date().toISOString() })
+  } catch {
+    return res.status(503).json({ ok: false, error: 'Database is unavailable.' })
+  }
 })
 
 function formatProduct(product) {
@@ -228,7 +245,27 @@ app.post('/api/orders', async (req, res) => {
       return res.status(503).json({ error: 'La base de données MySQL n’est pas configurée.' })
     }
 
-    const total = Math.max(0, Number(body.total) || 0)
+    const productIds = [...new Set(items.map((item) => item.id))]
+    const placeholders = productIds.map(() => '?').join(', ')
+    const [products] = await pool.execute(
+      `SELECT id, name, price FROM products WHERE id IN (${placeholders})`,
+      productIds,
+    )
+    if (products.length !== productIds.length) {
+      return res.status(400).json({ error: 'Un ou plusieurs produits ne sont plus disponibles.' })
+    }
+
+    const productsById = new Map(products.map((product) => [Number(product.id), product]))
+    const orderItems = items.map((item) => ({
+      id: item.id,
+      name: productsById.get(item.id).name,
+      quantity: item.quantity,
+    }))
+    const totalMilliunits = items.reduce((sum, item) => {
+      const product = productsById.get(item.id)
+      return sum + Math.round(Number(product.price) * 1000) * item.quantity
+    }, 0)
+    const total = (totalMilliunits / 1000).toFixed(3)
     const orderId = randomUUID()
     await pool.query(
       'INSERT INTO guest_orders (id, customer_name, phone, address, city, items, total) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -238,7 +275,7 @@ app.post('/api/orders', async (req, res) => {
         String(body.phone).trim().slice(0, 30),
         String(body.address).trim().slice(0, 300),
         String(body.city).trim().slice(0, 80),
-        JSON.stringify(items),
+        JSON.stringify(orderItems),
         total,
       ],
     )

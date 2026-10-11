@@ -34,7 +34,6 @@ export default function CheckoutPage() {
           address: form.get('address'),
           city: form.get('city'),
           items: items.map(({ id, name, quantity }) => ({ id, name, quantity })),
-          total: 0,
         }),
       })
       const result = await response.json()

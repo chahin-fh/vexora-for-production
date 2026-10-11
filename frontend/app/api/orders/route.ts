@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
+import { getBackendApiUrl } from '@/lib/backend-api'
 
 export async function POST(request: Request) {
+  const backendUrl = getBackendApiUrl()
+  if (!backendUrl) {
+    return NextResponse.json({ error: 'Backend API URL is not configured.' }, { status: 503 })
+  }
+
   try {
-    const backendUrl = (process.env.BACKEND_API_URL || 'http://localhost:4000').replace(/\/+$/, '')
     const response = await fetch(`${backendUrl}/api/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

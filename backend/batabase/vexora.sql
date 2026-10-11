@@ -1,8 +1,6 @@
-CREATE DATABASE IF NOT EXISTS vexora
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE vexora;
+-- Portable schema import for the existing MySQL database selected by the connection.
+-- This dump contains schema only; it does not contain product or order rows.
+-- Safe to run more than once. Existing tables and data are not replaced.
 
 CREATE TABLE IF NOT EXISTS guest_orders (
   id CHAR(36) NOT NULL,

@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
+import { getBackendApiUrl } from '@/lib/backend-api'
 
 async function forwardRequest(request: Request, method: 'GET' | 'POST' | 'PATCH' | 'DELETE') {
+  const backendUrl = getBackendApiUrl()
+  if (!backendUrl) {
+    return NextResponse.json({ error: 'Backend API URL is not configured.' }, { status: 503 })
+  }
+
   try {
-    const backendUrl = (process.env.BACKEND_API_URL || 'http://localhost:4000').replace(/\/+$/, '')
     const headers = new Headers({ 'Content-Type': 'application/json' })
     const adminKey = request.headers.get('x-admin-key')
     if (adminKey) headers.set('x-admin-key', adminKey)

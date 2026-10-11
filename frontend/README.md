@@ -179,14 +179,12 @@ Current limitations:
 
 - Cart state is not persisted across refreshes.
 - Cart state is not shared between `/` and `/products`.
-- The client sends `total: 0`; the API currently stores that value.
-- The API trusts submitted item names and does not recalculate prices from a server-side catalog.
 
-For production checkout, add a shared cart context or server-backed cart, validate product IDs against a server-side price catalog, calculate totals server-side, and enforce quantity limits at the aggregate order level.
+The order API looks up product IDs in MySQL and derives saved product names and totals from database prices. Keep the database catalog current; never accept prices from the browser as authoritative.
 
 ## Order Storage
 
-The backend creates a MySQL table named `guest_orders` automatically when it receives its first order:
+Initialize the database tables before accepting orders by running `backend/batabase/schema.sql` against the selected MySQL database. The schema does not create or select a database, so it can be used with managed databases such as Aiven:
 
 ```sql
 id char(36) primary key
@@ -200,9 +198,9 @@ status varchar(30) not null default 'pending'
 created_at timestamp not null default current_timestamp
 ```
 
-Configure MySQL in `backend/.env` with `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE`, or provide a `MYSQL_URL` connection string. Order requests fail with a clear error when MySQL is not configured or unavailable; they are not reported as successful unless stored.
+Configure MySQL with `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE`, or provide a `MYSQL_URL` connection string. For Aiven, use the individual variables and set `MYSQL_SSL_CA` to the CA certificate PEM contents. Order requests fail with a clear error when MySQL is not configured or unavailable; they are not reported as successful unless stored.
 
-Set a long, private `ADMIN_API_KEY` in `backend/.env` to enable the `/admin` dashboard. Enter this key on the dashboard; it is kept only in the current browser session and is required for listing or updating orders. The frontend API proxies admin requests to the backend, using `BACKEND_API_URL` if it is not running at `http://localhost:4000`.
+Set a long, private `ADMIN_API_KEY` in the backend environment to enable the `/admin` dashboard. Enter this key on the dashboard; it is kept only in the current browser session and is required for listing or updating orders. The frontend API proxies admin requests to the backend. In production, configure `BACKEND_API_URL`; localhost is used only in development.
 
 Do not expose database credentials to client components. Do not build SQL using string interpolation; use parameterized queries as the current API does.
 
@@ -217,7 +215,10 @@ MYSQL_PORT
 MYSQL_USER
 MYSQL_PASSWORD
 MYSQL_DATABASE
+MYSQL_SSL_CA
 ADMIN_API_KEY
+FRONTEND_URL
+UPLOAD_DIRECTORY
 BACKEND_API_URL
 SHOPIFY_STORE_DOMAIN
 SHOPIFY_STOREFRONT_ACCESS_TOKEN
