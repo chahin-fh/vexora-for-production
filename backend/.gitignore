@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+
+
+# Generated output and logs
+coverage/
+*.log
+npm-debug.log*
+
+# Operating system files
+.DS_Store
