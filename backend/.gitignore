@@ -1,9 +1,7 @@
 # Dependencies
 node_modules/
 
-# Local environment files
-.env*
-!.env.example
+.env
 
 
 # Generated output and logs
@@ -13,3 +11,5 @@ npm-debug.log*
 
 # Operating system files
 .DS_Store
+ 
+uploads/
