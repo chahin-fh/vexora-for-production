@@ -284,10 +284,6 @@ export function getSocialLabel() {
   return 'Suivez Vexora'
 }
 
-export function getStorefrontDescription() {
-  return 'Boutique en ligne Vexora : électronique, maison, mode et beauté livrés partout en Tunisie.'
-}
-
 export function getShopifyDomain() {
   return process.env.SHOPIFY_STORE_DOMAIN
 }
